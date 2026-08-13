@@ -19,3 +19,4 @@ dotnet add src/CodeSolution.Api/CodeSolution.Api.csproj reference src/CodeSoluti
 
 dotnet add tests/CodeSolution.Tests/CodeSolution.Tests.csproj reference src/CodeSolution.Core/CodeSolution.Core.csproj# KodtestNorionBank
 # CodeTestNorionBank
+# CodeTestNorionBank
