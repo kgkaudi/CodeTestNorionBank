@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TollFeeCalculator
+namespace CodeSolution.Core.Vehicle;
+
+public sealed class Car : IVehicle
 {
-    public interface Vehicle
-    {
-        String GetVehicleType();
-    }
+    public VehicleType Type => VehicleType.Car;
 }
