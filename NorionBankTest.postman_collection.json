@@ -1,0 +1,703 @@
+{
+	"info": {
+		"_postman_id": "69224abf-4eda-4edc-a8d4-28fe0a5ed38b",
+		"name": "NorionBankTest",
+		"description": "Gothenburg congestion tax API — POST /api/tollfee/calculate.\n\nAll requests use the {{baseUrl}} collection variable so the port only needs updating in one place if `dotnet run` picks a different one.\n\nDates used throughout are the same 2013 dates covered by the automated unit tests (TollCalculatorTests), so the expected fees here match what's asserted in code.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "45236529"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5238",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Happy path",
+			"item": [
+				{
+					"name": "Regular weekday passages (26 SEK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 26 SEK (8 + 18, more than 60 min apart)\", function () {",
+									"    pm.expect(body.totalFee).to.eql(26);",
+									"});",
+									"pm.test(\"Currency is SEK\", function () {",
+									"    pm.expect(body.currency).to.eql(\"SEK\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-01-02T06:00:00\",\n        \"2013-01-02T07:30:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Passages grouped within 60 minutes (13 SEK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 13 SEK (only the highest fee in the 60-min window)\", function () {",
+									"    pm.expect(body.totalFee).to.eql(13);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-01-02T06:00:00\",\n        \"2013-01-02T06:45:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unsorted passages still calculate correctly (26 SEK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 26 SEK even though passages arrived out of order\", function () {",
+									"    pm.expect(body.totalFee).to.eql(26);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-01-02T07:30:00\",\n        \"2013-01-02T06:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Daily maximum fee cap (60 SEK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is capped at 60 SEK\", function () {",
+									"    pm.expect(body.totalFee).to.eql(60);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-01-02T06:00:00\",\n        \"2013-01-02T07:00:00\",\n        \"2013-01-02T08:00:00\",\n        \"2013-01-02T15:30:00\",\n        \"2013-01-02T17:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Overnight passage is toll-free (0 SEK)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK (23:00 falls outside all fee bands)\", function () {",
+									"    pm.expect(body.totalFee).to.eql(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-01-02T23:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Toll-free days",
+			"item": [
+				{
+					"name": "Weekend is toll-free (Saturday)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK on a Saturday\", function () {",
+									"    pm.expect(body.totalFee).to.eql(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-01-05T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Public holiday is toll-free (Christmas Day)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK on Christmas Day\", function () {",
+									"    pm.expect(body.totalFee).to.eql(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-12-25T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Day before a public holiday is toll-free",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK the day before Good Friday\", function () {",
+									"    pm.expect(body.totalFee).to.eql(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-03-28T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "July is toll-free",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK during July\", function () {",
+									"    pm.expect(body.totalFee).to.eql(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": [\n        \"2013-07-15T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Toll-free vehicles",
+			"item": [
+				{
+					"name": "Motorbike is toll-free",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK for a motorbike\", function () {",
+									"    pm.expect(body.totalFee).to.eql(0);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"motorbike\",\n    \"passages\": [\n        \"2013-01-02T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tractor is toll-free",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK for a tractor\", function () { pm.expect(body.totalFee).to.eql(0); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"tractor\",\n    \"passages\": [\n        \"2013-01-02T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Emergency vehicle is toll-free",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK for an emergency vehicle\", function () { pm.expect(body.totalFee).to.eql(0); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"emergency\",\n    \"passages\": [\n        \"2013-01-02T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Diplomat vehicle is toll-free",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK for a diplomat vehicle\", function () { pm.expect(body.totalFee).to.eql(0); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"diplomat\",\n    \"passages\": [\n        \"2013-01-02T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Foreign-registered vehicle is toll-free",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK for a foreign vehicle\", function () { pm.expect(body.totalFee).to.eql(0); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"foreign\",\n    \"passages\": [\n        \"2013-01-02T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Military vehicle is toll-free",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+									"const body = pm.response.json();",
+									"pm.test(\"Total fee is 0 SEK for a military vehicle\", function () { pm.expect(body.totalFee).to.eql(0); });"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"military\",\n    \"passages\": [\n        \"2013-01-02T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Validation / error cases",
+			"item": [
+				{
+					"name": "Unknown vehicle type returns 400",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"spaceship\",\n    \"passages\": [\n        \"2013-01-02T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Empty passages array returns 400",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicleType\": \"car\",\n    \"passages\": []\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Missing vehicleType returns 400",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"passages\": [\n        \"2013-01-02T07:00:00\"\n    ]\n}",
+							"options": { "raw": { "language": "json" } }
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tollfee/calculate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tollfee", "calculate"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
